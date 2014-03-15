@@ -8,7 +8,7 @@ import runTrialFunctions as myFuncs
 
 np.random.seed(1)
 
-outputfilename = 'unifRandMexhaustiveB'+'_NUMMs_'+str(myFuncs.NUMMs)+'_NTREES_'+str(myFuncs.NTREES)+'_SIZETESTSET_'+str(myFuncs.SIZETESTSET)+'_rep1.pkl'
+outputfilename = 'unifRandMexhaustiveB'+'_NUMMs_'+str(myFuncs.NUMMs)+'_NTREES_'+str(myFuncs.NTREES)+'_rep1.pkl'
 output = open(outputfilename, 'wb')
 
 #testsetfilename = 'testset_rep1.pkl'
@@ -26,13 +26,13 @@ while rep < MAXREP:
     
     np.random.seed(1)
     
-    Mfunc = myFuncs.unifRandM
     Bfunc = myFuncs.exhaustiveB
-    MethodPerf.append(myFuncs.runSearch(testdata, Mfunc, Bfunc))
-    print 'unifRandM, exhaustiveB done'
+    MethodPerf.append(myFuncs.runSearch(Bfunc))
+    print ' exhaustiveB done'
     
-output.close()
+
 pickle.dump(MethodPerf, output)
+output.close()
 #testsetfile.close()
 exit()
 # Need to randomize so that random value that achieves max is returned, not just the first one in argmax. 
