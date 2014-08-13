@@ -7,16 +7,55 @@ import sys
 import time
 
 
-homedir = "/scratch/odemasi/SearchJack/"
+homedir = "/Users/odemasi/LocalProjects/SearchJack/"
+datafile = homedir + 'data/results-vcs.txt'
+areafile = homedir + 'data/results-dcs.txt'
+benchmarks = ['dgemm', 'dhrystone', 'median', 'multiply', 'qsort', 'spmv','towers', 'vvadd']
+Nbench = len(benchmarks)
 
 
+def importdata(datafile, areafile):
+    df = open(datafile, 'r')
+    af = open(areafile,'r')
+    X = {}
+    y = {}
+    for line in af:
+        design, area = line.strip('\n').split(',')
+        y[designFromStr(design)] = area
+        X[designFromStr(design)] = {}
+    for line in df:
+        design, bench, cycles, instructions = line.strip('\n').split(',')
+        X[designFromStr(design)][bench] = [cycles, instructions]
+    return X, y
 
-def enumerateSearchSpace():
-	#***
-	# needs to return a np.array of all possible search combinations. 
-	# each row is a feasible configuration
-	space = np.random.rand(100,5)
-	return space
+
+def vec2design(datavec):
+    return 'design_nm-%d_is-%d_iw-%d_ds-%d_dw-%d' % datavec
+
+def designFromStr(designstr):
+    return '_'.join(designstr.split('_')[:-1])
+     
+
+def design2vec(design):
+    datavec = [x.split('-')[1] for x in design.split('_')[1:]]
+    return datavec
+
+
+def enumerateSearchSpace(X):
+    Ndesigns = len(X.keys())
+    Nattr = len(design2vec(X.keys()[0]))
+    space = np.NaN*np.zeros((Ndesigns, Nattr))
+    for i, design in enumerate(X.keys()):
+        space[i,:] = design2vec(design)
+    return space
+
+
+# def enumerateSearchSpace(X, y):
+# 	#***
+# 	# needs to return a np.array of all possible search combinations. 
+# 	# each row is a feasible configuration
+# 	space = np.random.rand(100,5)
+# 	return space
 	
 # def selectTestSet(SIZETESTSET):
 # 
@@ -59,7 +98,7 @@ def runTest(B):
     # ***
     # must be written. Return numpy row vector of performance metrics. 
     # can be modified to return whichever metrics are important. 
-    perf = np.random.rand(1,1)
+    perf = y[vec2design(tuple(B))]
     return perf 
 
 
@@ -100,8 +139,8 @@ def chooseB(funcB, F):
     # Bs = np.array([0,0,0]).reshape(1, 3)
     return Bs
 
-def exhaustiveB(F):
-    return designspace
+# def exhaustiveB(F):
+#     return designspace
 
 def randomB(F):
     temp = myRandI(SIZESPACE, BSUBSETSIZE)
@@ -118,10 +157,10 @@ def treeB(F):
         # [~, ind] = sort(stdevM, 'descend')
         ind = np.argsort(stdev) #ascending
         ind = ind[::-1] #descending
-        Bs = designspace[ind[1:BSUBSETSIZE],:]
+        Bs = designspace[ind[0:BSUBSETSIZE],:]
     return Bs
 
-def treeucbB(predsM, stdevM):
+def treeucbB(F):
 	# Pick B that has best trade off of prediction with uncertainty
     if F == []:
         Bs = randomB(F)
@@ -130,9 +169,9 @@ def treeucbB(predsM, stdevM):
         # [~, ind] = sort(predsM + stdevM, 'descend'); 
         # Bs = designspace(ind(1:BSUBSETSIZE),:);  
         pred, stdev = myPredict(F, designspace)
-        ind = np.argsort(preds + stdev) #ascending
+        ind = np.argsort(pred + stdev) #ascending
         ind = ind[::-1]
-        Bs = designspace[ind[1:BSUBSETSIZE],:]
+        Bs = designspace[ind[0:BSUBSETSIZE],:]
     return Bs
 
 # def measureMethodPerf(F, testdata):
@@ -163,12 +202,10 @@ def treeucbB(predsM, stdevM):
 
 
 def runSearch(Bfunc):
-	
     F = []
     
     observed = NaN*np.zeros((MAXOBS, NUMPARAMS + NUMPERFMETRICS))
-    methodPerf = {}
-    methodPerf['numtried'] = NaN*np.zeros((1, MAXOBS))
+    methodPerf = {'numtried' : NaN*np.zeros(MAXOBS), 'numobs': NaN*np.zeros(MAXOBS), 'best': NaN*np.zeros(MAXOBS)}
 
     numObs = 0
     iter = 0 
@@ -182,6 +219,7 @@ def runSearch(Bfunc):
         
         #store "observed" data
         nBs = Bs.shape[0]
+        
         if numObs+nBs > MAXOBS:
             newObserved = NaN*np.zeros((numObs + nBs, NUMPARAMS + NUMPERFMETRICS))
             newObserved[0:numObs, :] = observed[0:numObs, :]
@@ -191,29 +229,41 @@ def runSearch(Bfunc):
              observed[numObs : numObs + nBs,:] =  np.concatenate((Bs, perf), axis=1)
         
         numObs = numObs + nBs; 
-        
+        print nBs, numObs
         # update model
         F = clone(model)
         F.fit(observed[0:numObs, 0:NUMPARAMS], np.ravel(observed[0:numObs, NUMPARAMS]))
 
         # update stats on search
-        methodPerf['numtried'][0,iter] = nBs 
-        iter = iter + 1;
+        methodPerf['numtried'][iter] = nBs 
+        methodPerf['numobs'][iter] = numObs 
+        iter += 1;
     methodPerf['observed'] = observed 
+    methodPerf['observedPerf'] = observed[:, NUMPARAMS]
+    methodPerf['best'][0]= methodPerf['observedPerf'][0]
+    for i, item in enumerate(methodPerf['observedPerf'][1:]):
+        methodPerf['best'][i+1] = np.max([methodPerf['best'][i], item])
     return methodPerf   
 
 
 
+homedir = "/Users/odemasi/LocalProjects/SearchJack/"
+datafile = homedir + 'data/results-vcs.txt'
+areafile = homedir + 'data/results-dcs.txt'
+benchmarks = ['dgemm', 'dhrystone', 'median', 'multiply', 'qsort', 'spmv','towers', 'vvadd']
+Nbench = len(benchmarks)
 
-designspace = enumerateSearchSpace()
-SIZESPACE = np.size(designspace, axis = 0) 
-NUMPARAMS = np.size(designspace, axis = 1) 
+X, y = importdata(datafile, areafile)
+
+designspace = enumerateSearchSpace(X)
+SIZESPACE = designspace.shape[0]
+NUMPARAMS = designspace.shape[1]
 NUMPERFMETRICS = 1 #***
 NaN = np.nan
 
-MAXOBS = 800 # maximum number of observations
-NUMMs = 500 # number of random M's that we consider in treeM
-NTREES = 15 
+MAXOBS = 100#SIZESPACE # maximum number of observations
+# NUMMs = 500 # number of random M's that we consider in treeM
+NTREES = 5 
 model = RandomForestRegressor(n_estimators=NTREES)
 
 BSUBSETSIZE = 1 
