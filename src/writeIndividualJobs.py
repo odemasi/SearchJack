@@ -13,7 +13,7 @@ import runTrialFunctions as myFuncs\n\
 \n\
 np.random.seed(0)\n\
 \n\
-outputfilename = '$BSEARCH'+'_NTREES_'+str(myFuncs.NTREES)+'.pkl'\n\
+outputfilename = '$BSEARCH'+'_NTREES_'+str(myFuncs.NTREES)+ '_' + myFuncs.bench +'.pkl'\n\
 output = open(outputfilename, 'wb')\n\
 \n\
 rep = 0\n\
@@ -35,7 +35,7 @@ output.close()\n\
 
 
 
-Bsearches = ['randomB', 'treeB', 'treeucbB']
+Bsearches = ['randomB', 'treeB', 'treeucbB','oracleB','treeoptB']
 for search in Bsearches:
 	file = open("runTrial_" + search + ".py",'w')
 	file.write(T.substitute( BSEARCH=search))

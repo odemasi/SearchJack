@@ -9,7 +9,7 @@ import runTrialFunctions as myFuncs
 
 np.random.seed(0)
 
-outputfilename = 'treeucbB'+'_NTREES_'+str(myFuncs.NTREES)+ '_' + myFuncs.bench +'.pkl'
+outputfilename = 'oracleB'+'_NTREES_'+str(myFuncs.NTREES)+ '_' + myFuncs.bench +'.pkl'
 output = open(outputfilename, 'wb')
 
 rep = 0
@@ -17,11 +17,11 @@ MAXREP = 10
 MethodPerf = []
 while rep < MAXREP:
     rep += 1
-    Bfunc = myFuncs.treeucbB
+    Bfunc = myFuncs.oracleB
     MethodPerf.append(myFuncs.runSearch(Bfunc))
     
 pickle.dump(MethodPerf, output)
-print 'treeucbB done'
+print 'oracleB done'
     
 output.close()
 # Need to randomize so that random value that achieves max is returned, not just the first one in argmax. 

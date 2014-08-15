@@ -9,7 +9,7 @@ import runTrialFunctions as myFuncs
 
 np.random.seed(0)
 
-outputfilename = 'randomB'+'_NTREES_'+str(myFuncs.NTREES)+'.pkl'
+outputfilename = 'randomB'+'_NTREES_'+str(myFuncs.NTREES)+ '_' + myFuncs.bench +'.pkl'
 output = open(outputfilename, 'wb')
 
 rep = 0

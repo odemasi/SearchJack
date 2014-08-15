@@ -17,8 +17,8 @@ Nbench = len(benchmarks)
 def importdata(datafile, areafile):
     df = open(datafile, 'r')
     af = open(areafile,'r')
-    X = {}
-    y = {}
+    X = {} # table of instructions and cycles for each benchmark: X[designFromStr(design)][bench]
+    y = {} # table of area measurements for each configuration
     for line in af:
         design, area = line.strip('\n').split(',')
         y[designFromStr(design)] = area
@@ -37,7 +37,7 @@ def designFromStr(designstr):
      
 
 def design2vec(design):
-    datavec = [x.split('-')[1] for x in design.split('_')[1:]]
+    datavec = map(float, [x.split('-')[1] for x in design.split('_')[1:]])
     return datavec
 
 
@@ -84,13 +84,11 @@ def enumerateSearchSpace(X):
 
 
 def runTests( Bs):
-	#OUTPUT: perf - np.array. One row for each B, each row is set of performance metrics for given B. 
-	perf = NaN * np.zeros((Bs.shape[0], NUMPERFMETRICS))
-	for b in range(0, Bs.shape[0]):
-		#execute python script to write and execute script
-		perf[b,:] = runTest(Bs[b,:]) # this should have a comma?
-        
-        return perf
+    #OUTPUT: perf - np.array. One row for each B, each row is set of performance metrics for given B. 
+    perf = NaN * np.zeros((Bs.shape[0], NUMPERFMETRICS))
+    for b in range(0, Bs.shape[0]):
+        perf[b,:] = runTest(Bs[b,:])
+    return perf
 
 
 
@@ -98,10 +96,23 @@ def runTest(B):
     # ***
     # must be written. Return numpy row vector of performance metrics. 
     # can be modified to return whichever metrics are important. 
-    perf = y[vec2design(tuple(B))]
+    design = vec2design(tuple(B))
+    inst = float(X[design][bench][0])
+    cycles = float(X[design][bench][1])
+    area = float(y[design])
+    perf = (inst/cycles)/area*10e+7
     return perf 
 
-
+def oracle():
+    optperf = 0
+    for design in y.keys():
+        perf = runTest(design2vec(design))
+        if perf > optperf:
+            optdesign = np.array(design2vec(design))
+            optperf = perf
+    bestB = np.NaN*np.zeros((1,optdesign.shape[0]))
+    bestB[0,:] = optdesign
+    return bestB
 
 def myPredict(F, featurespace):
 	# INPUT: 
@@ -154,10 +165,9 @@ def treeB(F):
     else:
         #% choose point that has most uncertainty
         pred, stdev = myPredict(F, designspace)
-        # [~, ind] = sort(stdevM, 'descend')
-        ind = np.argsort(stdev) #ascending
-        ind = ind[::-1] #descending
-        Bs = designspace[ind[0:BSUBSETSIZE],:]
+        obj = stdev
+        inds = np.nonzero(obj == np.max(obj))[0]
+        Bs = designspace[inds[np.random.randint(len(inds), size=BSUBSETSIZE)],:]
     return Bs
 
 def treeucbB(F):
@@ -166,13 +176,40 @@ def treeucbB(F):
         Bs = randomB(F)
     else:
         # % choose point trades off exploration/exploitation
-        # [~, ind] = sort(predsM + stdevM, 'descend'); 
-        # Bs = designspace(ind(1:BSUBSETSIZE),:);  
         pred, stdev = myPredict(F, designspace)
-        ind = np.argsort(pred + stdev) #ascending
-        ind = ind[::-1]
-        Bs = designspace[ind[0:BSUBSETSIZE],:]
+        obj = pred + stdev
+        inds = np.nonzero(obj == np.max(obj))[0]
+        Bs = designspace[inds[np.random.randint(len(inds), size=BSUBSETSIZE)],:]
     return Bs
+
+def treeoptB(F):
+    # Pick B that has best predicted value
+    if F == []:
+        Bs = randomB(F)
+    else:
+        # % choose point trades off exploration/exploitation
+        pred, stdev = myPredict(F, designspace)
+        obj = pred
+        inds = np.nonzero(obj == np.max(obj))[0]
+        Bs = designspace[inds[np.random.randint(len(inds), size=BSUBSETSIZE)],:]
+    return Bs
+
+def oracleB(F):
+    # Pick B that has best predicted value
+    return ORACLE
+
+# def treeucbB(F):
+#     # Pick B that has best trade off of prediction with uncertainty
+#     if F == []:
+#         Bs = randomB(F)
+#     else:
+#         # % choose point trades off exploration/exploitation
+#         pred, stdev = myPredict(F, designspace)
+#         obj = pred + stdev
+#         inds = np.nonzero(obj == np.max(obj))[0]
+#         Bs = designspace[inds[np.random.randint(len(inds), size=BSUBSETSIZE)],:]
+#     return Bs
+
 
 # def measureMethodPerf(F, testdata):
 # 	# measure performance on held out test set (for which we know true best)
@@ -230,10 +267,11 @@ def runSearch(Bfunc):
         
         numObs = numObs + nBs; 
         print nBs, numObs
+        print Bs, perf
         # update model
         F = clone(model)
         F.fit(observed[0:numObs, 0:NUMPARAMS], np.ravel(observed[0:numObs, NUMPARAMS]))
-
+        
         # update stats on search
         methodPerf['numtried'][iter] = nBs 
         methodPerf['numobs'][iter] = numObs 
@@ -251,9 +289,12 @@ homedir = "/Users/odemasi/LocalProjects/SearchJack/"
 datafile = homedir + 'data/results-vcs.txt'
 areafile = homedir + 'data/results-dcs.txt'
 benchmarks = ['dgemm', 'dhrystone', 'median', 'multiply', 'qsort', 'spmv','towers', 'vvadd']
+bench = 'dhrystone'
 Nbench = len(benchmarks)
 
 X, y = importdata(datafile, areafile)
+ORACLE = oracle()
+
 
 designspace = enumerateSearchSpace(X)
 SIZESPACE = designspace.shape[0]
