@@ -20,6 +20,9 @@ for datafile in datafiles:
 	
 	# plt.plot(np.mean(perf, axis=0),'o-', label=datafile)
 plt.legend(datafiles, loc=4)
+plt.xlabel('# points sampled', fontsize = 16)
+plt.ylabel('Instructions per cycle per unit area', fontsize = 16)
+plt.title('Search progress over design space', fontsize=16)
 plt.show()
 
 
