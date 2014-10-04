@@ -281,7 +281,56 @@ def runSearch(Bfunc):
     methodPerf['best'][0]= methodPerf['observedPerf'][0]
     for i, item in enumerate(methodPerf['observedPerf'][1:]):
         methodPerf['best'][i+1] = np.max([methodPerf['best'][i], item])
-    return methodPerf   
+    return methodPerf
+
+
+# def runParetoSearch(Mfunc, Bfunc):
+# choose most promising B (based on estimation of objective)
+# test that B on the most uncertain benchmark M
+# 
+#     F = []
+    
+#     observed = NaN*np.zeros((MAXOBS, NUMPARAMS + NUMPERFMETRICS))
+#     methodPerf = {'numtried' : NaN*np.zeros(MAXOBS), 'numobs': NaN*np.zeros(MAXOBS), 'best': NaN*np.zeros(MAXOBS)}
+
+#     numObs = 0
+#     iter = 0 
+#     while numObs < MAXOBS:
+        
+#         # these are the new configurations that we are going to try
+#         Bs = chooseB(Bfunc, F)
+        
+#         # query function to get new data
+#         perf = runTests( Bs)
+        
+#         #store "observed" data
+#         nBs = Bs.shape[0]
+        
+#         if numObs+nBs > MAXOBS:
+#             newObserved = NaN*np.zeros((numObs + nBs, NUMPARAMS + NUMPERFMETRICS))
+#             newObserved[0:numObs, :] = observed[0:numObs, :]
+#             newObserved[numObs : numObs + nBs,:] = np.concatenate((Bs, perf), axis=1)
+#             observed = newObserved
+#         else:
+#              observed[numObs : numObs + nBs,:] =  np.concatenate((Bs, perf), axis=1)
+        
+#         numObs = numObs + nBs; 
+#         print nBs, numObs
+#         print Bs, perf
+#         # update model
+#         F = clone(model)
+#         F.fit(observed[0:numObs, 0:NUMPARAMS], np.ravel(observed[0:numObs, NUMPARAMS]))
+        
+#         # update stats on search
+#         methodPerf['numtried'][iter] = nBs 
+#         methodPerf['numobs'][iter] = numObs 
+#         iter += 1;
+#     methodPerf['observed'] = observed 
+#     methodPerf['observedPerf'] = observed[:, NUMPARAMS]
+#     methodPerf['best'][0]= methodPerf['observedPerf'][0]
+#     for i, item in enumerate(methodPerf['observedPerf'][1:]):
+#         methodPerf['best'][i+1] = np.max([methodPerf['best'][i], item])
+#     return methodPerf   
 
 
 
@@ -289,7 +338,7 @@ homedir = "/Users/odemasi/LocalProjects/SearchJack/"
 datafile = homedir + 'data/results-vcs.txt'
 areafile = homedir + 'data/results-dcs.txt'
 benchmarks = ['dgemm', 'dhrystone', 'median', 'multiply', 'qsort', 'spmv','towers', 'vvadd']
-bench = 'dhrystone'
+bench = 'multiply'
 Nbench = len(benchmarks)
 
 X, y = importdata(datafile, areafile)
@@ -304,7 +353,7 @@ NaN = np.nan
 
 MAXOBS = 100#SIZESPACE # maximum number of observations
 # NUMMs = 500 # number of random M's that we consider in treeM
-NTREES = 5 
+NTREES = 10 
 model = RandomForestRegressor(n_estimators=NTREES)
 
 BSUBSETSIZE = 1 
